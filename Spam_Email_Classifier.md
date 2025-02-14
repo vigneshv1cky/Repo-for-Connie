@@ -171,21 +171,8 @@ print(X)
 ### Components of TF-IDF
 
 1. **Term Frequency (TF):** Measures how often a word appears in a document.
-   $$
-   TF = \frac{\text{Number of times a term appears in a document}}{\text{Total number of terms in the document}}
-   $$
 
 2. **Inverse Document Frequency (IDF):** Reduces the weight of commonly occurring words and increases the weight of rare words.
-   $$
-   IDF = \log\left(\frac{\text{Total number of documents}}{\text{Number of documents containing the term}}\right)
-   $$
-
-### TF-IDF Score Calculation
-
-The final **TF-IDF score** for a term is computed as:
-   $$
-   TF\text{-}IDF = TF \times IDF
-   $$
 
 This scoring method helps in focusing on important words while ignoring commonly occurring ones like "the", "is", etc.
 
@@ -250,7 +237,7 @@ SMOTE is a technique used to address the problem of class imbalance in classific
 SMOTE generates synthetic examples by interpolating between existing samples of the minority class. The process follows these steps:
 
 1. **Identify k-nearest neighbors**  
-   - For each sample in the minority class, SMOTE finds its k-nearest neighbors (typically \( k = 5 \)) in the feature space.
+   - For each sample in the minority class, SMOTE finds its k-nearest neighbors (typically  k = 5) in the feature space.
 
 2. **Select a random neighbor**  
    - One of the k-nearest neighbors is randomly selected.
