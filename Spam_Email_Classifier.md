@@ -184,7 +184,7 @@ print(X)
 
 The final **TF-IDF score** for a term is computed as:
    $$
-   TF-IDF = TF \times IDF
+   TF\text{-}IDF = TF \times IDF
    $$
 
 This scoring method helps in focusing on important words while ignoring commonly occurring ones like "the", "is", etc.
@@ -254,13 +254,15 @@ SMOTE generates synthetic examples by interpolating between existing samples of 
 
 2. **Select a random neighbor**  
    - One of the k-nearest neighbors is randomly selected.
-
+   
 3. **Create a synthetic data point**  
    - A new sample is created by interpolating between the original data point and the selected neighbor using the formula:  
-     $$
-     x_{new} = x_{original} + \lambda \times (x_{neighbor} - x_{original})
-     $$
-     where \( \lambda\) is a random number between 0 and 1.
+
+     ```
+     x_new = x_original + λ * (x_neighbor - x_original)
+     ```
+
+     where `λ` (lambda) is a random number between 0 and 1.
 
 4. **Repeat for multiple samples**  
    - This process is repeated until the desired balance between classes is achieved.
