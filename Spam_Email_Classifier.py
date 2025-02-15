@@ -167,8 +167,22 @@ vectorizer = TfidfVectorizer(
 X = vectorizer.fit_transform(df["text"])  # Transform text into TF-IDF features
 y = df["label"]  # Target variable (spam=1, ham=0)
 
+# get indexing
+print("\nWord indexes:")
+print(vectorizer.vocabulary_)
+
+# display tf-idf values
+print("\ntf-idf values:")
 print(X)
 
+# Get feature names (words)
+feature_names = vectorizer.get_feature_names_out()
+
+# Convert to DataFrame with words as column names
+df_tfidf = pd.DataFrame(X.toarray(), columns=feature_names)
+
+# Print the TF-IDF matrix
+print(df_tfidf)
 
 ###############################################
 # Split Data for Training & Testing
@@ -293,24 +307,188 @@ plt.ylabel("True Label")
 plt.title("Confusion Matrix after SMOTE")
 plt.show()
 
-
 ###############################################
-# Improve Model Performance
-# Hyperparameter Tuning
+# Hyperparameter Tuning - Logistic Regression
 ###############################################
 
-from sklearn.model_selection import GridSearchCV
+# Import necessary libraries
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.linear_model import LogisticRegression
+import time
+import numpy as np
+
+# Section 1: Basic GridSearchCV - Regularization Tuning (Initial Step)
+###############################################
 
 # Define hyperparameters to tune
-param_grid = {"C": [0.01, 0.1, 1, 10, 50, 100, 250, 500, 1000]}
+param_grid = {
+    "C": [0.01, 0.1, 1, 10, 50, 100, 250, 500, 1000]  # Regularization strength
+}
 
-# Use GridSearchCV for best parameter selection
-grid_search = GridSearchCV(LogisticRegression(), param_grid, cv=5, scoring="f1")
+# Use GridSearchCV for best parameter selection with 5-fold cross-validation
+grid_search = GridSearchCV(
+    LogisticRegression(max_iter=1000), param_grid, cv=5, scoring="roc_auc"
+)
+
+# Fit the grid search to the data
 grid_search.fit(X_train_resampled, y_train_resampled)
 
-# Best model
+# Extract and print the best model and the best regularization parameter
 best_model = grid_search.best_estimator_
 print(f"Best Regularization Parameter: {grid_search.best_params_['C']}")
+
+###############################################
+# Hyperparameter Tuning - RandomizedSearchCV
+###############################################
+
+# Section 3: RandomizedSearchCV for ElasticNet Regularization
+# Define the hyperparameter distribution for RandomizedSearchCV
+param_dist = {
+    "C": np.logspace(-3, 3, 20),  # Log scale for wide range sampling
+    "penalty": ["elasticnet"],  # ElasticNet penalty
+    "l1_ratio": np.linspace(0, 1, 20),  # Randomly sample ratio between 0 and 1
+}
+
+# Use RandomizedSearchCV for a faster random sampling over the hyperparameter space
+# n_iter defines how many random combinations to sample
+random_search = RandomizedSearchCV(
+    LogisticRegression(max_iter=100, solver="saga"),
+    param_distributions=param_dist,
+    n_iter=10,  # Number of random combinations to try
+    cv=5,
+    scoring="roc_auc",
+    n_jobs=-1,  # Use all available CPU cores
+    random_state=42,  # For reproducibility
+)
+
+# Fit the RandomizedSearchCV model
+random_search.fit(X_train_resampled, y_train_resampled)
+
+# Extract and print the best model and parameters from RandomizedSearchCV
+print(
+    f"Best Regularization Parameter (C) from RandomizedSearchCV: {random_search.best_params_['C']}"
+)
+print(
+    f"Best L1 Ratio from RandomizedSearchCV: {random_search.best_params_['l1_ratio']}"
+)
+
+
+###############################################
+# Hyperparameter Tuning - ElasticNet Regularization
+###############################################
+
+"""
+
+# Section 2: GridSearchCV with ElasticNet Regularization
+# Using ElasticNet to tune both `C` and `l1_ratio` hyperparameters
+param_grid = {
+    "C": [0.01, 0.1, 1, 10, 50, 100],  # Regularization strength (reduced)
+    "penalty": ["elasticnet"],  # ElasticNet penalty
+    "l1_ratio": [0.1, 0.5, 0.9],  # ElasticNet ratio between L1 and L2 (reduced)
+}
+
+# Start the timer to measure execution time
+start_time = time.time()
+
+# GridSearchCV for ElasticNet tuning with parallelism (n_jobs=-1) for faster computation
+grid_search = GridSearchCV(
+    LogisticRegression(max_iter=1000, solver="saga"),
+    param_grid,
+    cv=5,
+    scoring="roc_auc",
+    n_jobs=-1,  # Use all available CPU cores for parallelization
+)
+
+# Fit the model to the data
+grid_search.fit(X_train_resampled, y_train_resampled)
+
+# Calculate and print the time taken for the grid search
+end_time = time.time()
+execution_time = end_time - start_time
+print(f"Execution time: {execution_time:.2f} seconds")
+
+# Extract and print the best model and parameters from GridSearchCV
+best_model = grid_search.best_estimator_
+print(f"Best Regularization Parameter (C): {grid_search.best_params_['C']}")
+print(f"Best L1 Ratio: {grid_search.best_params_['l1_ratio']}")
+
+"""
+
+###############################################
+# Hyperparameter Tuning - Multiple Models
+###############################################
+
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+import numpy as np
+
+# Define hyperparameter distributions for different models
+param_grids = {
+    "LogisticRegression": {
+        "C": np.logspace(-3, 3, 20),
+        "penalty": ["elasticnet"],
+        "l1_ratio": np.linspace(0, 1, 20),
+        "solver": ["saga"],
+    },
+    "RandomForest": {
+        "n_estimators": np.arange(50, 500, 50),
+        "max_depth": [None, 10, 20, 30, 40, 50],
+        "min_samples_split": [2, 5, 10],
+        "min_samples_leaf": [1, 2, 4],
+        "bootstrap": [True, False],
+    },
+}
+
+# Define models
+models = {
+    "LogisticRegression": LogisticRegression(max_iter=100, solver="saga"),
+    "RandomForest": RandomForestClassifier(),
+}
+
+# Perform RandomizedSearchCV for each model
+best_params = {}
+
+for model_name, model in models.items():
+    print(f"Running RandomizedSearchCV for {model_name}...")
+
+    random_search = RandomizedSearchCV(
+        model,
+        param_distributions=param_grids[model_name],
+        n_iter=10,  # Number of random combinations to try
+        cv=5,
+        scoring="roc_auc",
+        n_jobs=-1,
+        random_state=42,
+    )
+
+    random_search.fit(X_train_resampled, y_train_resampled)
+    best_params[model_name] = random_search.best_params_
+
+    print(f"Best parameters for {model_name}: {random_search.best_params_}")
+    print("-" * 50)
+
+# Print final best parameters for all models
+print("Best hyperparameters for each model:")
+for model_name, params in best_params.items():
+    print(f"{model_name}: {params}")
+
+
+###############################################
+# Best Model
+###############################################
+
+# Define and train the final model with the best hyperparameters
+best_model = LogisticRegression(
+    C=26.366508987303554,
+    penalty="elasticnet",
+    l1_ratio=0.1,
+    solver="saga",
+    max_iter=100,
+)
+
+# Fit the model on the training data
+best_model.fit(X_train_resampled, y_train_resampled)
 
 ###############################################
 # Evaluate the Best Model (After Hyperparameter Tuning)
@@ -342,41 +520,31 @@ plt.title("Confusion Matrix (Best Model after Hyperparameter Tuning)")
 plt.show()
 
 ###############################################
-"""
-By default, Logistic Regression predicts spam if probability > 0.5. 
-We can lower this threshold to increase recall.
-"""
+# ROC-AUC Curve
 ###############################################
 
-# Get probability predictions
-y_probs = best_model.predict_proba(X_test)[:, 1]  # Probability of spam class
+# Import necessary libraries
+from sklearn.metrics import roc_curve, auc
 
-# Set a threshold (e.g., 0.9 instead of 0.5)
-# You can play around with this threshold
-new_threshold = 0.9
-y_pred_adjusted = (y_probs >= new_threshold).astype(int)
+# Probabilities for ROC AUC evaluation
+y_pred_proba = best_model.predict_proba(X_test)[:, 1]
 
-# Evaluate new threshold
-print("Performance with Adjusted Threshold:")
-print(classification_report(y_test, y_pred_adjusted))
+# Compute ROC curve and ROC area
+fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+roc_auc = auc(fpr, tpr)
 
-# Confusion matrix after adjusting the threshold
-conf_matrix_best_adjusted = confusion_matrix(y_test, y_pred_adjusted)
-
-# Visualizing confusion matrix after threshold adjustment
-plt.figure(figsize=(6, 4))
-sns.heatmap(
-    conf_matrix_best_adjusted,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=["Ham", "Spam"],
-    yticklabels=["Ham", "Spam"],
-)
-plt.xlabel("Predicted Label")
-plt.ylabel("True Label")
-plt.title("Confusion Matrix (Best Model with Adjusted Threshold)")
+# Plot ROC curve
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, lw=2, label=f"ROC curve (area = {roc_auc:.2f})")
+plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("Receiver Operating Characteristic (ROC) Curve")
+plt.legend(loc="lower right")
 plt.show()
+
 
 ###############################################
 # Save the Final Model and Vectorizer for Future Use
@@ -405,3 +573,7 @@ prediction = loaded_model.predict(new_message_transformed)
 
 # Print prediction result (0 = Ham, 1 = Spam)
 print(f"The new message is classified as: {'Spam' if prediction[0] == 1 else 'Ham'}")
+
+###############################################
+# Hurray! The END :)
+###############################################
