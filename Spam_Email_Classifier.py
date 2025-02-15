@@ -29,6 +29,7 @@ print(df.head())
 
 # Check dataset size and structure
 print(df.shape)  # Rows & Columns
+print("*******")
 print(df.info())  # Data types & Missing values
 
 ###############################################
@@ -75,17 +76,13 @@ df["label"] = df["label"].map({"ham": 0, "spam": 1})
 df["text_length"] = df["text"].apply(len)
 
 # Histogram of text length distribution
+
 plt.figure(figsize=(10, 5))
-sns.histplot(
-    df[df["label"] == 0]["text_length"], bins=30, kde=True, label="Ham", color="blue"
-)
-sns.histplot(
-    df[df["label"] == 1]["text_length"], bins=30, kde=True, label="Spam", color="red"
-)
-plt.legend()
+sns.histplot(df[df["label"] == 0]["text_length"], bins=30, kde=True, color="blue")
+sns.histplot(df[df["label"] == 1]["text_length"], bins=30, kde=True, color="red")
+plt.legend(labels=["Ham", "Spam"])  # Explicitly provide the labels
 plt.title("Text Length Distribution (Spam vs. Ham)")
 plt.show()
-
 
 ###############################################
 #  Most Common Words in Spam vs. Ham
