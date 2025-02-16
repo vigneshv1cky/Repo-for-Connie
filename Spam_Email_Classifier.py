@@ -1,3 +1,7 @@
+import matplotlib.pyplot as plt
+
+plt.style.use("ggplot")
+
 ###############################################
 # Download & Extract the ZIP File
 ###############################################
@@ -307,7 +311,7 @@ plt.ylabel("True Label")
 plt.title("Confusion Matrix after SMOTE")
 plt.show()
 
-###############################################
+##############################################################################################
 # Hyperparameter Tuning - Logistic Regression
 ###############################################
 
@@ -415,13 +419,27 @@ print(f"Best L1 Ratio: {grid_search.best_params_['l1_ratio']}")
 """
 
 ###############################################
-# Hyperparameter Tuning - Multiple Models
+# Hyperparameter Tuning for -
+# LogisticRegression,
+# RandomForest,
+# SVC,
+# KNeighborsClassifier,
+# AdaBoostClassifier
+# GradientBoostingClassifier
 ###############################################
 
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    AdaBoostClassifier,
+    GradientBoostingClassifier,
+)
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from xgboost import XGBClassifier
 import numpy as np
+
 
 # Define hyperparameter distributions for different models
 param_grids = {
@@ -438,16 +456,52 @@ param_grids = {
         "min_samples_leaf": [1, 2, 4],
         "bootstrap": [True, False],
     },
+    "SVC": {
+        "C": np.logspace(-3, 3, 20),
+        "kernel": ["linear", "rbf", "poly", "sigmoid"],
+        "gamma": ["scale", "auto"],
+        "degree": np.arange(1, 5),
+    },
+    "KNeighborsClassifier": {
+        "n_neighbors": np.arange(3, 30, 2),
+        "weights": ["uniform", "distance"],
+        "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
+        "leaf_size": np.arange(20, 100, 10),
+        "p": [1, 2],  # 1 for Manhattan distance, 2 for Euclidean distance
+    },
+    "AdaBoostClassifier": {
+        "n_estimators": np.arange(50, 500, 50),
+        "learning_rate": [0.001, 0.01, 0.1, 1],
+    },
+    "GradientBoostingClassifier": {
+        "n_estimators": np.arange(50, 500, 50),
+        "learning_rate": [0.001, 0.01, 0.1, 0.2],
+        "max_depth": [3, 5, 7, 9],
+        "subsample": [0.8, 0.9, 1.0],
+    },
 }
 
 # Define models
 models = {
     "LogisticRegression": LogisticRegression(max_iter=100, solver="saga"),
     "RandomForest": RandomForestClassifier(),
+    "SVC": SVC(),
+    "KNeighborsClassifier": KNeighborsClassifier(),
+    "AdaBoostClassifier": AdaBoostClassifier(),
+    "GradientBoostingClassifier": GradientBoostingClassifier(),
 }
+
 
 # Perform RandomizedSearchCV for each model
 best_params = {}
+best_recall_scores = {}
+
+# Initialize a dictionary to store the recall scores for each model and fold
+fold_recall_scores = {model_name: [] for model_name in models}
+
+###############################################
+# Perform RandomizedSearchCV for each model
+###############################################
 
 for model_name, model in models.items():
     print(f"Running RandomizedSearchCV for {model_name}...")
@@ -457,35 +511,109 @@ for model_name, model in models.items():
         param_distributions=param_grids[model_name],
         n_iter=10,  # Number of random combinations to try
         cv=5,
-        scoring="roc_auc",
+        scoring="recall",
         n_jobs=-1,
         random_state=42,
+        return_train_score=False,  # We don't need training scores
     )
 
     random_search.fit(X_train_resampled, y_train_resampled)
     best_params[model_name] = random_search.best_params_
+    best_recall_scores[model_name] = random_search.best_score_
+
+    # Capture the recall score for each fold
+    fold_recall_scores[model_name] = random_search.cv_results_["mean_test_score"]
 
     print(f"Best parameters for {model_name}: {random_search.best_params_}")
+    print(f"Best Recall score for {model_name}: {random_search.best_score_}")
     print("-" * 50)
 
-# Print final best parameters for all models
-print("Best hyperparameters for each model:")
+###############################################
+# Print final best parameters and Recall scores for all models
+###############################################
+
+print("Best hyperparameters and Recall scores for each model:")
 for model_name, params in best_params.items():
-    print(f"{model_name}: {params}")
+    print(f"{model_name}: {params} with Recall = {best_recall_scores[model_name]}")
 
 
 ###############################################
+# Plot the recall scores for each fold for each model
+###############################################
+
+fig, ax = plt.subplots(figsize=(15, 8))
+
+for model_name, recall_scores in fold_recall_scores.items():
+    ax.plot(range(1, len(recall_scores) + 1), recall_scores, label=model_name)
+
+ax.set_title("Recall Scores for Each Fold (RandomizedSearchCV)")
+ax.set_xlabel("Fold Number")
+ax.set_ylabel("Recall Score")
+ax.legend()
+fig.tight_layout()
+
+plt.show()
+
+###############################################
+# Plotting the Recall Scores for Each Model
+###############################################
+
+# Data for plotting
+model_names = list(best_recall_scores.keys())
+recall_scores = list(best_recall_scores.values())
+
+plt.figure(figsize=(10, 6))
+
+# Using a colormap to create a gradient of colors
+colors = plt.cm.RdBu(np.linspace(0, 1, len(model_names)))
+
+plt.barh(model_names, recall_scores, color=colors)
+plt.xlabel("Recall Score")
+plt.title("Recall Scores for Different Models")
+plt.xlim(0, 1)  # Recall scores range from 0 to 1
+plt.show()
+
+
+##############################################################################################
 # Best Model
 ###############################################
 
-# Define and train the final model with the best hyperparameters
-best_model = LogisticRegression(
-    C=26.366508987303554,
-    penalty="elasticnet",
-    l1_ratio=0.1,
-    solver="saga",
-    max_iter=100,
+param_grid = {
+    "n_estimators": np.arange(50, 500, 50),
+    "max_depth": [None, 10, 20, 30, 40, 50],
+    "min_samples_split": [2, 5, 10],
+    "min_samples_leaf": [1, 2, 4],
+    "bootstrap": [True, False],
+}
+
+# Initialize the RandomForestClassifier
+rf = RandomForestClassifier()
+
+# Initialize GridSearchCV with 5-fold cross-validation
+grid_search = GridSearchCV(
+    estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring="recall"
 )
+
+# Fit the grid search to the data
+grid_search.fit(X_train_resampled, y_train_resampled)
+
+# Print the best parameters and the best recall score
+print(f"Best Hyperparameters: {grid_search.best_params_}")
+print(f"Best Recall: {grid_search.best_score_}")
+
+###############################################
+# Best Model With Best Hyperparameters
+###############################################
+
+# Define and train the final model with the best hyperparameters
+best_model = RandomForestClassifier(
+    n_estimators=150,
+    min_samples_split=10,
+    min_samples_leaf=1,
+    max_depth=None,
+    bootstrap=False,
+)
+
 
 # Fit the model on the training data
 best_model.fit(X_train_resampled, y_train_resampled)
