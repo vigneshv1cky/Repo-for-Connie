@@ -341,6 +341,37 @@ grid_search.fit(X_train_resampled, y_train_resampled)
 best_model = grid_search.best_estimator_
 print(f"Best Regularization Parameter: {grid_search.best_params_['C']}")
 
+
+###############################################
+# Improve Model Performance
+# Hyperparameter Tuning with RandomizedSearchCV
+###############################################
+
+from scipy.stats import loguniform
+
+# Define the hyperparameter search space
+param_dist = {
+    "C": loguniform(0.001, 100)
+}  # Using loguniform for better search in large ranges
+
+# Use RandomizedSearchCV for best parameter selection
+random_search = RandomizedSearchCV(
+    LogisticRegression(max_iter=1000),
+    param_distributions=param_dist,
+    n_iter=20,  # Number of random samples
+    cv=5,
+    scoring="f1",
+    random_state=42,
+    n_jobs=-1,
+)
+
+random_search.fit(X_train_resampled, y_train_resampled)
+
+# Best model
+best_model = random_search.best_estimator_
+print(f"Best Regularization Parameter: {random_search.best_params_['C']}")
+
+
 ###############################################
 # Hyperparameter Tuning - RandomizedSearchCV
 ###############################################
