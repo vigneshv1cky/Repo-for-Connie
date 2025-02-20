@@ -8,10 +8,10 @@ logging.basicConfig(level=logging.INFO)
 # Load the trained spam detection model and the TF-IDF vectorizer.
 try:
     loaded_model = joblib.load(
-        "/Users/vignesh/GitHub/Repo-for-Connie/Project 7/best_spam_classifier_model.pkl"
+        "/Users/vignesh/GitHub/Repo-for-Connie/Project 7/flask_api/best_spam_classifier_model.pkl"
     )
     loaded_vectorizer = joblib.load(
-        "/Users/vignesh/GitHub/Repo-for-Connie/Project 7/tfidf_vectorizer.pkl"
+        "/Users/vignesh/GitHub/Repo-for-Connie/Project 7/flask_api/tfidf_vectorizer.pkl"
     )
     logging.info("Model and vectorizer loaded successfully.")
 except Exception as e:
