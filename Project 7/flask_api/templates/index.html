@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Spam Detection</title>
+    <style>
+        /* GitHub-like font stack and base styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 2rem;
+            color: #24292e;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(27, 31, 35, 0.12);
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Flash messages styling */
+        .flash {
+            color: #d73a49;
+            margin-bottom: 1rem;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .flash li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Form styling */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #24292e;
+        }
+
+        .form-textarea {
+            width: 100%;
+            height: 150px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .form-button {
+            background-color: #2ea44f;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .form-button:hover {
+            background-color: #2c974b;
+        }
+
+        /* Result display styling */
+        .result {
+            margin-top: 1rem;
+            font-weight: bold;
+            padding: 0.75rem;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            background-color: #f1f8ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Spam Detection</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class="flash">
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+        <form method="POST" action="{{ url_for('predict') }}">
+            <div class="form-group">
+                <label for="email_text" class="form-label">Enter Email Text:</label>
+                <textarea id="email_text" name="email_text" class="form-textarea"
+                    placeholder="Paste your email here...">{{ email_text or '' }}</textarea>
+            </div>
+            <button type="submit" class="form-button">Detect Spam</button>
+        </form>
+        {% if prediction %}
+        <div class="result">
+            Prediction: {{ prediction }}
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>
